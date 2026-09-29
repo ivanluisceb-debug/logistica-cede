@@ -99,6 +99,8 @@
     var quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (quieto || !Element.prototype.animate) { c.classList.add('fuera'); return; }
     document.getElementById('estado').style.visibility = 'hidden';
+    c.style.pointerEvents = 'none'; // la app ya se puede tocar mientras explota el logo
+    setTimeout(function () { c.classList.add('fuera'); }, 2500); // por si el celular frena la animación
     var r = svg.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     var u = 1042 / r.width; // píxeles de pantalla -> unidades del dibujo
     // toma impulso...
