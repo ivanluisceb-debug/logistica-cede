@@ -1,6 +1,6 @@
 // Guarda la "cáscara" de la app para que abra rápido y muestre el aviso de sin conexión.
 // Los datos siempre vienen en vivo de Google (no se guardan acá).
-var CACHE = 'cede-logistica-v2';
+var CACHE = 'cede-logistica-v3';
 var ARCHIVOS = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
@@ -28,4 +28,13 @@ self.addEventListener('fetch', function (e) {
       return caches.match(e.request).then(function (r) { return r || caches.match('index.html'); });
     })
   );
+});
+
+// Al tocar la notificación de un pedido entregado, abre (o trae al frente) la app
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (l) {
+    for (var i = 0; i < l.length; i++) if ('focus' in l[i]) return l[i].focus();
+    return self.clients.openWindow('./');
+  }));
 });
