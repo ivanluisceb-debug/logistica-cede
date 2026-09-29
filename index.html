@@ -35,9 +35,28 @@
   <div id="msg">Cargando…</div>
   <button id="reintentar" onclick="location.reload()">Reintentar</button>
 </div>
-<iframe id="app" title="Logística CEDE" allow="geolocation; clipboard-write"
-        src="https://script.google.com/macros/s/AKfycbxFTtcrDLYH3lxPtExA74zRp1SQcDk-3OTkfqQFvuthexKGslo35Az7nXEMNauCgk5mjQ/exec"></iframe>
+<iframe id="app" title="Logística CEDE" allow="geolocation; clipboard-write"></iframe>
 <script>
+  var APP = 'https://script.google.com/macros/s/AKfycbxFTtcrDLYH3lxPtExA74zRp1SQcDk-3OTkfqQFvuthexKGslo35Az7nXEMNauCgk5mjQ/exec';
+  // Ya instalada: se lo avisa a la app para que oculte los botones de "Instalar"
+  var instalada = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  document.getElementById('app').src = APP + (instalada ? '?pwa=1' : '');
+
+  // Botón "Instalar en Android" de la app: si Chrome ofrece instalar, se abre el cartel directamente
+  var diferido = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); diferido = e; });
+  window.addEventListener('appinstalled', function () { diferido = null; });
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.cede !== 'instalar' || !/\.(googleusercontent|google)\.com$/.test(new URL(e.origin).hostname)) return;
+    if (d.so === 'android' && diferido) {
+      try { e.source.postMessage({ cede: 'ok' }, '*'); } catch (x) {}
+      diferido.prompt();
+      diferido.userChoice.then(function () { diferido = null; });
+    }
+    // Si no se puede (iPhone, ya instalada, otro navegador), la app muestra los pasos
+  });
+
   var carga = document.getElementById('carga'), listo = false;
   document.getElementById('app').addEventListener('load', function () {
     listo = true; carga.classList.add('fuera');
