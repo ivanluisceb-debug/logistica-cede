@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Logística CEDE</title>
+<meta name="description" content="Pedidos de materiales y seguimiento del camión · CEDE srl">
+<meta name="theme-color" content="#1e293b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Logística CEDE">
+<style>
+  html, body { margin: 0; height: 100%; background: #1e293b; overflow: hidden; }
+  #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block;
+         padding-top: env(safe-area-inset-top); box-sizing: border-box; background: #f1f5f9; }
+  #carga { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+           gap: 18px; background: #1e293b; color: #cbd5e1; font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+           transition: opacity .3s; z-index: 2; text-align: center; padding: 24px; }
+  #carga img { width: 120px; height: 120px; border-radius: 26px; }
+  #carga.fuera { opacity: 0; pointer-events: none; }
+  .spin { width: 28px; height: 28px; border: 3px solid #334155; border-top-color: #60a5fa; border-radius: 50%; animation: g 0.9s linear infinite; }
+  @keyframes g { to { transform: rotate(360deg); } }
+  #carga button { margin-top: 6px; border: 0; border-radius: 999px; padding: 10px 18px; font: 600 14px system-ui, sans-serif;
+                  background: #2563eb; color: #fff; cursor: pointer; display: none; }
+</style>
+</head>
+<body>
+<div id="carga">
+  <img src="icon-192.png" alt="">
+  <div class="spin" id="spin"></div>
+  <div id="msg">Cargando…</div>
+  <button id="reintentar" onclick="location.reload()">Reintentar</button>
+</div>
+<iframe id="app" title="Logística CEDE" allow="geolocation; clipboard-write"
+        src="https://script.google.com/macros/s/AKfycbxFTtcrDLYH3lxPtExA74zRp1SQcDk-3OTkfqQFvuthexKGslo35Az7nXEMNauCgk5mjQ/exec"></iframe>
+<script>
+  var carga = document.getElementById('carga'), listo = false;
+  document.getElementById('app').addEventListener('load', function () {
+    listo = true; carga.classList.add('fuera');
+  });
+  function sinConexion() {
+    document.getElementById('spin').style.display = 'none';
+    document.getElementById('msg').textContent = 'Sin conexión a internet. Revisá los datos o el wifi.';
+    document.getElementById('reintentar').style.display = 'inline-block';
+    carga.classList.remove('fuera');
+  }
+  if (!navigator.onLine) sinConexion();
+  window.addEventListener('offline', sinConexion);
+  window.addEventListener('online', function () { if (!listo) location.reload(); else carga.classList.add('fuera'); });
+  setTimeout(function () { if (!listo) document.getElementById('msg').textContent = 'Está tardando más de lo normal…'; }, 12000);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+</script>
+</body>
+</html>
