@@ -26,6 +26,29 @@
   @keyframes g { to { transform: rotate(360deg); } }
   #carga button { margin-top: 6px; border: 0; border-radius: 999px; padding: 10px 18px; font: 600 14px system-ui, sans-serif;
                   background: #2563eb; color: #fff; cursor: pointer; display: none; }
+
+  /* Campanita de notificaciones */
+  #campana { position: fixed; top: calc(env(safe-area-inset-top) + 8px); right: 10px; z-index: 3; width: 42px; height: 42px;
+             border: 0; border-radius: 50%; background: #1e293b; color: #fff; cursor: pointer; display: flex; align-items: center;
+             justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.35); opacity: .92; }
+  #campana svg { width: 22px; height: 22px; }
+  #campana.suena svg { animation: tim .8s ease-in-out 2; transform-origin: 50% 10%; }
+  @keyframes tim { 0%,100% { transform: rotate(0); } 20% { transform: rotate(16deg); } 40% { transform: rotate(-14deg); } 60% { transform: rotate(9deg); } 80% { transform: rotate(-6deg); } }
+  #badge { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px;
+           background: #ef4444; color: #fff; font: 700 11px/18px system-ui, sans-serif; text-align: center; display: none; }
+  #panel { position: fixed; top: calc(env(safe-area-inset-top) + 56px); right: 10px; z-index: 3; width: min(340px, calc(100vw - 20px));
+           max-height: 70vh; display: none; flex-direction: column; background: #fff; color: #0f172a; border-radius: 14px;
+           box-shadow: 0 8px 30px rgba(0,0,0,.35); overflow: hidden; font: 14px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  #panel.abierto { display: flex; }
+  #panel header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #1e293b; color: #fff; font-weight: 600; }
+  #panel header button, #permiso { border: 0; background: none; color: #93c5fd; font: 600 12px system-ui, sans-serif; cursor: pointer; padding: 4px; }
+  #permiso { display: none; width: 100%; padding: 10px; background: #eff6ff; color: #1d4ed8; }
+  #lista { overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+  #lista li { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; }
+  #lista li.nueva { background: #f0f9ff; }
+  #lista b { display: block; }
+  #lista small { color: #64748b; }
+  #vacio { padding: 26px 14px; text-align: center; color: #64748b; }
 </style>
 </head>
 <body>
@@ -36,6 +59,17 @@
   <button id="reintentar" onclick="location.reload()">Reintentar</button>
 </div>
 <iframe id="app" title="Logística CEDE" allow="geolocation; clipboard-write"></iframe>
+
+<button id="campana" aria-label="Notificaciones" aria-expanded="false">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+  <span id="badge"></span>
+</button>
+<div id="panel" role="dialog" aria-label="Notificaciones">
+  <header><span>Notificaciones</span><button id="limpiar">Borrar todo</button></header>
+  <button id="permiso">Activar avisos en este dispositivo</button>
+  <ul id="lista"></ul>
+  <div id="vacio">No hay notificaciones</div>
+</div>
 <script>
   var APP = 'https://script.google.com/macros/s/AKfycbxFTtcrDLYH3lxPtExA74zRp1SQcDk-3OTkfqQFvuthexKGslo35Az7nXEMNauCgk5mjQ/exec';
   // Ya instalada: se lo avisa a la app para que oculte los botones de "Instalar"
@@ -56,6 +90,56 @@
     }
     // Si no se puede (iPhone, ya instalada, otro navegador), la app muestra los pasos
   });
+
+  // ---- Campanita de notificaciones ----
+  // La app (Apps Script) puede avisar con: parent.postMessage({ cede: 'notif', titulo: '...', texto: '...' }, '*')
+  var KEY = 'cede_notifs', notifs = [];
+  try { notifs = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (x) {}
+  var campana = document.getElementById('campana'), panel = document.getElementById('panel'),
+      lista = document.getElementById('lista'), badge = document.getElementById('badge'),
+      vacio = document.getElementById('vacio'), permiso = document.getElementById('permiso');
+
+  function guardar() { try { localStorage.setItem(KEY, JSON.stringify(notifs.slice(0, 50))); } catch (x) {} }
+  function hora(t) { return new Date(t).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+  function pintar() {
+    lista.innerHTML = '';
+    notifs.forEach(function (n) {
+      var li = document.createElement('li'); if (!n.leida) li.className = 'nueva';
+      var b = document.createElement('b'); b.textContent = n.titulo;
+      var p = document.createElement('div'); p.textContent = n.texto || '';
+      var f = document.createElement('small'); f.textContent = hora(n.t);
+      li.appendChild(b); if (n.texto) li.appendChild(p); li.appendChild(f); lista.appendChild(li);
+    });
+    var sin = notifs.filter(function (n) { return !n.leida; }).length;
+    badge.textContent = sin > 9 ? '9+' : sin; badge.style.display = sin ? 'block' : 'none';
+    vacio.style.display = notifs.length ? 'none' : 'block';
+    permiso.style.display = ('Notification' in window && Notification.permission === 'default') ? 'block' : 'none';
+  }
+  function agregar(titulo, texto) {
+    notifs.unshift({ titulo: String(titulo || 'Aviso').slice(0, 120), texto: String(texto || '').slice(0, 300), t: Date.now(), leida: panel.classList.contains('abierto') });
+    notifs = notifs.slice(0, 50); guardar(); pintar();
+    campana.classList.remove('suena'); void campana.offsetWidth; campana.classList.add('suena');
+    if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+      try { new Notification(notifs[0].titulo, { body: notifs[0].texto, icon: 'icon-192.png' }); } catch (x) {}
+    }
+  }
+  function abrir(v) {
+    panel.classList.toggle('abierto', v); campana.setAttribute('aria-expanded', v);
+    if (!v) { notifs.forEach(function (n) { n.leida = true; }); guardar(); }
+    pintar();
+  }
+  campana.addEventListener('click', function () { abrir(!panel.classList.contains('abierto')); });
+  document.getElementById('limpiar').addEventListener('click', function () { notifs = []; guardar(); pintar(); });
+  permiso.addEventListener('click', function () { Notification.requestPermission().then(pintar); });
+  document.addEventListener('click', function (e) {
+    if (panel.classList.contains('abierto') && !panel.contains(e.target) && !campana.contains(e.target)) abrir(false);
+  });
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.cede !== 'notif' || !/\.(googleusercontent|google)\.com$/.test(new URL(e.origin).hostname)) return;
+    agregar(d.titulo, d.texto);
+  });
+  pintar();
 
   var carga = document.getElementById('carga'), listo = false;
   document.getElementById('app').addEventListener('load', function () {
