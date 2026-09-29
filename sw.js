@@ -1,6 +1,6 @@
 // Guarda la "cáscara" de la app para que abra rápido y muestre el aviso de sin conexión.
 // Los datos siempre vienen en vivo de Google (no se guardan acá).
-var CACHE = 'cede-logistica-v3';
+var CACHE = 'cede-logistica-v4';
 var ARCHIVOS = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
